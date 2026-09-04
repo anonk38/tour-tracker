@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#121212">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Tour Tracker">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1086/1086741.png">
+    
+    <title>{{ tour_name }} | Tour Tracker</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { background: #121212; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 15px; margin: 0; }
+        .card { background: #1e1e1e; padding: 16px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #333; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
+        input, select, button { width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; border: 1px solid #444; background: #2a2a2a; color: #fff; font-size: 14px; }
+        button { background: #007bff; font-weight: bold; cursor: pointer; border: none; }
+        .btn-green { background: #28a745; }
+        .btn-edit { background: #f39c12; color: white; padding: 5px 8px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; width: auto; margin-top: 0; }
+        .btn-del { background: #dc3545; color: white; padding: 5px 8px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; width: auto; margin-top: 0; }
+        .btn-restore { background: #17a2b8; color: white; padding: 5px 8px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; width: auto; margin-top: 0; }
+        .btn-whatsapp { background: #25D366; color: white; border-radius: 20px; width: auto; padding: 8px 20px; font-size: 13px; margin: 0 auto; display: block; border: 1px solid #1da851; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #2a2a2a; }
+        .text-green { color: #28a745; font-weight: bold; font-size: 1.1rem; }
+        .text-red { color: #dc3545; font-weight: bold; font-size: 1.1rem; }
+        .text-blue { color: #17a2b8; font-weight: bold; font-size: 1.1rem; }
+        .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; background: #333; color: #bbb; }
+        .top-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .login-box { display: flex; gap: 6px; }
+        .login-box input { margin-top: 0; padding: 6px 8px; width: 100px; }
+        .login-box button { margin-top: 0; padding: 6px 10px; width: auto; }
+        .logout-btn { color: #ff5252; text-decoration: none; font-size: 12px; border: 1px solid #ff5252; padding: 4px 10px; border-radius: 5px; font-weight:bold; }
+        .tour-header { text-align: center; margin: 10px 0 15px 0; }
+        .tour-title { font-size: 1.6rem; font-weight: bold; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
+        .tour-budget { font-size: 13px; color: #f39c12; margin-top: 5px; font-weight: bold; }
+        .alert { padding: 8px; border-radius: 6px; margin-bottom: 12px; text-align: center; font-size: 13px; color: white; }
+        .alert-error { background: #e74c3c; }
+        .alert-success { background: #2ecc71; }
+        .archive-item { display: flex; justify-content: space-between; align-items: center; background: #2a2a2a; padding: 10px 12px; border-radius: 6px; border: 1px solid #333; margin-bottom: 8px; }
+        .archive-link { color: #17a2b8; text-decoration: none; font-weight: bold; font-size: 14px; }
+        .paid-badge { background: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); }
+        .modal-content { background: #1e1e1e; margin: 15% auto; padding: 20px; border: 1px solid #444; border-radius: 10px; width: 85%; max-width: 350px; }
+    </style>
+</head>
+<body>
+
+    <div class="top-nav">
+        <span style="font-size: 13px; color: #888;">📍 Tour Tracker</span>
+        <div>
+            {% if is_admin %}
+                <span style="color: #28a745; font-size: 12px; margin-right: 10px;">Admin Mode</span>
+                <a href="/logout" class="logout-btn">Logout</a>
+            {% else %}
+                <form action="/admin_login" method="POST" class="login-box">
+                    <input type="password" name="password" placeholder="Admin PIN" required>
+                    <button type="submit">লগইন</button>
+                    <a href="/logout" class="logout-btn" style="margin-left:5px;">লগআউট</a>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="tour-header">
+        <div class="tour-title">🏖️ {{ tour_name }}</div>
+        {% if per_person_budget > 0 %}
+            <div class="tour-budget">জনপ্রতি টার্গেট বাজেট (Per Person Budget): ৳{{ "%.0f"|format(per_person_budget) }}</div>
+        {% else %}
+            <div class="tour-budget">No Budget Set</div>
+        {% endif %}
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <button class="btn-whatsapp" onclick="shareOnWhatsApp()">💬 হোয়াটসঅ্যাপে সামারি শেয়ার (Share Summary)</button>
+    </div>
+
+    {% if error %} <div class="alert alert-error">{{ error }}</div> {% endif %}
+    {% if success %} <div class="alert alert-success">{{ success }}</div> {% endif %}
+
+    <!-- ব্যালেন্স কার্ড -->
+    <div class="card">
+        <div class="grid">
+            <div><small style="color:#888;">মোট জমা<br>(Total In)</small><div class="text-green">৳{{ "%.0f"|format(total_collected) }}</div></div>
+            <div><small style="color:#888;">মোট খরচ<br>(Total Out)</small><div class="text-red">৳{{ "%.0f"|format(total_expense) }}</div></div>
+            <div><small style="color:#888;">অবশিষ্ট ফান্ড<br>(Balance)</small><div class="text-blue">৳{{ "%.0f"|format(balance) }}</div></div>
+        </div>
+    </div>
+
+    {% if is_admin %}
+    <!-- ট্যুর সেটিংস -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div class="card" style="border-left: 4px solid #f39c12; margin-bottom: 15px;">
+            <h4 style="margin: 0; color: #f39c12; font-size: 13px;">⚙️ সেটিংস (Settings)</h4>
+            <form action="/update_tour_settings" method="POST" style="margin-top: 8px;">
+                <input type="text" name="tour_name" value="{{ tour_name }}" placeholder="Tour Name" required>
+                <input type="number" step="any" name="per_person_budget" value="{{ '%.0f'|format(per_person_budget) }}" placeholder="Per Person Budget (৳)" required>
+                <button type="submit" style="background: #f39c12;">আপডেট / Update</button>
+            </form>
+        </div>
+        
+        <div class="card" style="border-left: 4px solid #9b59b6; margin-bottom: 15px;">
+            <h4 style="margin: 0; color: #9b59b6; font-size: 13px;">🔒 পিন বদল (Change PIN)</h4>
+            <form action="/update_passwords" method="POST" style="margin-top: 8px;">
+                <input type="text" name="new_viewer_password" placeholder="New Viewer PIN" required style="margin-bottom: 5px;">
+                <input type="text" name="new_admin_password" placeholder="New Admin PIN" required>
+                <button type="submit" style="background: #9b59b6; margin-top: 5px;">সেভ করুন / Save</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ট্যুর আর্কাইভ ও ডিলিট -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div class="card" style="border-left: 4px solid #e74c3c; margin-bottom: 15px;">
+            <h4 style="margin: 0; color: #e74c3c; font-size: 13px;">📦 আর্কাইভ (Archive Tour)</h4>
+            <form action="/archive_and_reset" method="POST" onsubmit="return confirm('বর্তমান হিসাবটি আর্কাইভে জমা হবে। নিশ্চিত? (Will be archived)')">
+                <input type="text" name="new_tour_name" placeholder="New Tour Name" required>
+                <button type="submit" style="background: #e74c3c;">আর্কাইভ করুন / Archive</button>
+            </form>
+        </div>
+
+        <div class="card" style="border-left: 4px solid #c0392b; margin-bottom: 15px;">
+            <h4 style="margin: 0; color: #c0392b; font-size: 13px;">🗑️ রিসেট (Reset Tour)</h4>
+            <p style="font-size: 10px; color: #888; margin: 4px 0 0 0;">ভুল এন্ট্রি মুছে ফেলুন (Delete current entries permanently)</p>
+            <form action="/reset_current_tour" method="POST" onsubmit="return confirm('সতর্কতা: বর্তমান ট্যুরের সব ডেটা চিরতরে মুছে যাবে! নিশ্চিত? (Warning: Data will be lost!)')" style="margin-top: 8px;">
+                <button type="submit" style="background: #c0392b;">রিসেট / Delete All</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- খরচ ইনপুট (আপডেট করা ক্যাটাগরি তালিকা) -->
+    <div class="card" style="border-left: 4px solid #007bff;">
+        <h4 style="margin: 0; color: #007bff;">＋ নতুন খরচ যুক্ত করুন (Add Expense)</h4>
+        <form action="/add_expense" method="POST">
+            <select name="category" id="catSelect" onchange="toggleCustomCategory()">
+                <option value="যাতায়াত (Transport)">যাতায়াত (Transport)</option>
+                <option value="খাবার ও ডিনার (Food & Dinner)">খাবার ও ডিনার (Food & Dinner)</option>
+                <option value="হোটেল ভাড়া (Hotel)">হোটেল ভাড়া (Hotel)</option>
+                <option value="টোল ও বোট ভাড়া (Toll & Boat)">টোল ও বোট ভাড়া (Toll & Boat)</option>
+                <option value="পানি ও ড্রিংকস (Water & Drinks)">পানি ও ড্রিংকস (Water & Drinks)</option>
+                <option value="অন্যান্য (Others)">অন্যান্য (Others)</option>
+                <option value="custom">+ নতুন কাস্টম ক্যাটাগরি (Custom)</option>
+            </select>
+            <input type="text" id="customInput" name="custom_category" placeholder="কাস্টম ক্যাটাগরির নাম লিখুন (Category Name)" style="display: none;">
+            <input type="text" name="title" placeholder="বিবরণ (Details / Title)" required>
+            <input type="number" step="any" name="amount" placeholder="টাকার পরিমাণ (Amount ৳)" required>
+            <button type="submit">খরচ সেভ করুন / Save Expense</button>
+        </form>
+    </div>
+
+    <!-- ফান্ড সংগ্রহ -->
+    <div class="card" style="border-left: 4px solid #28a745;">
+        <h4 style="margin: 0; color: #28a745;">＋ ফান্ড সংগ্রহ (Add Collection)</h4>
+        <form action="/add_collection" method="POST">
+            <input type="text" name="member_name" placeholder="সদস্যের নাম (Member Name)" required>
+            <input type="number" step="any" name="amount" placeholder="টাকার পরিমাণ (Amount ৳)">
+            <button type="submit" class="btn-green">জমা দিন / Save Collection</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- খরচের তালিকা -->
+    <div class="card">
+        <h4 style="margin: 0 0 10px 0;">📝 খরচের বিস্তারিত (Expense Details)</h4>
+        <table>
+            <tr>
+                <th>বিবরণ (Details)</th>
+                <th style="text-align: right;">টাকা (Amount)</th>
+                {% if is_admin %}<th style="text-align: center;">অ্যাকশন</th>{% endif %}
+            </tr>
+            {% for item in expenses %}
+            <tr>
+                <td>
+                    {{ item[2] }} <br>
+                    <span class="badge">{{ item[1] }}</span> <small style="color: #777;">{{ item[4] }}</small>
+                </td>
+                <td style="text-align: right; color:#dc3545; font-weight: bold;">৳{{ "%.0f"|format(item[3]) }}</td>
+                {% if is_admin %}
+                <td style="text-align: center; display: flex; gap: 4px; justify-content: center; margin-top: 5px;">
+                    <button class="btn-edit" onclick="openExpenseEditModal({{ item[0] }}, '{{ item[1] }}', '{{ item[2] }}', {{ item[3] }})">এডিট</button>
+                    <form action="/delete_expense/{{ item[0] }}" method="POST" style="margin:0;">
+                        <button type="submit" class="btn-del" onclick="return confirm('মুছে ফেলতে চান? (Delete?)')">ডিলিট</button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% else %}
+            <tr><td colspan="3" style="text-align:center; color:#666;">কোনো রেকর্ড নেই (No Records)</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <!-- ক্যাটাগরিভিত্তিক খরচ -->
+    <div class="card">
+        <h4 style="margin: 0 0 10px 0;">📊 ক্যাটাগরিভিত্তিক খরচ (By Category)</h4>
+        <table>
+            <tr><th>খাত (Category)</th><th style="text-align: right;">মোট (Total)</th></tr>
+            {% for cat in breakdown %}
+            <tr>
+                <td>{{ cat[0] }}</td>
+                <td style="text-align: right; color:#dc3545; font-weight: bold;">৳{{ "%.0f"|format(cat[1]) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="2" style="text-align:center; color:#666;">কোনো খরচ নেই (No Data)</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <!-- সদস্যদের জমার হিসাব -->
+    <div class="card">
+        <h4 style="margin: 0 0 10px 0;">👥 সদস্যদের জমার হিসাব (Collection List)</h4>
+        <table>
+            <tr>
+                <th>নাম (Name)</th>
+                <th style="text-align: right;">জমা (Paid)</th>
+                <th style="text-align: right;">বাকি (Due)</th>
+            </tr>
+            {% for mem in members %}
+            {% set paid = mem[1] %}
+            {% set due = per_person_budget - paid %}
+            <tr>
+                <td>{{ mem[0] }}</td>
+                <td style="text-align: right; color:#28a745; font-weight: bold;">৳{{ "%.0f"|format(paid) }}</td>
+                <td style="text-align: right; font-weight: bold; color: {% if due > 0 %}#e74c3c{% else %}#888{% endif %};">
+                    {% if per_person_budget == 0 %}
+                        -
+                    {% elif due > 0 %}
+                        ৳{{ "%.0f"|format(due) }}
+                    {% else %}
+                        <span class="paid-badge">পরিশোধিত (Paid)</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" style="text-align:center; color:#666;">কোনো জমা নেই (No Collections)</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+    
+    <!-- ফাইনাল সেটলমেন্ট -->
+    <div class="card" style="border-left: 4px solid #17a2b8;">
+        <h4 style="margin: 0 0 10px 0; color: #17a2b8;">🎯 সেটলমেন্ট (Final Settlement)</h4>
+        <p style="font-size: 12px; color: #aaa; margin-top: 0;">
+            মোট সদস্য (Members): <strong>{{ members_count }}</strong> | প্রকৃত খরচ (Actual Cost): <strong>৳{{ "%.0f"|format(actual_per_person_expense) }}</strong>
+        </p>
+        <table>
+            <tr><th>নাম (Name)</th><th style="text-align: right;">অবস্থা (Status)</th></tr>
+            {% for s in settlement_list %}
+            <tr>
+                <td>{{ s.name }}</td>
+                <td style="text-align: right; font-weight: bold;">
+                    {% if s.diff > 0 %}
+                        <span style="color: #28a745;">৳{{ "%.0f"|format(s.abs_diff) }} ফেরত পাবে (Get)</span>
+                    {% elif s.diff < 0 %}
+                        <span style="color: #e74c3c;">৳{{ "%.0f"|format(s.abs_diff) }} দিতে হবে (Give)</span>
+                    {% else %}
+                        <span style="color: #888;">হিসাব ক্লিয়ার (Clear)</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="2" style="text-align:center; color:#666;">কোনো সদস্য নেই</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    {% if is_admin and collections_list %}
+    <div class="card">
+        <h4 style="margin: 0 0 10px 0;">🔄 জমার হিস্ট্রি (History & Edits)</h4>
+        <table>
+            <tr><th>সদস্য (Member)</th><th>টাকা (Amount)</th><th style="text-align: center;">অ্যাকশন (Action)</th></tr>
+            {% for col in collections_list %}
+            <tr>
+                <td>{{ col[1] }}<br><small style="color:#777;">{{ col[3] }}</small></td>
+                <td style="color:#28a745; font-weight: bold;">৳{{ "%.0f"|format(col[2]) }}</td>
+                <td style="text-align: center; display: flex; gap: 4px; justify-content: center;">
+                    <button class="btn-edit" onclick="openEditModal({{ col[0] }}, '{{ col[1] }}', {{ col[2] }})">এডিট</button>
+                    <form action="/delete_collection/{{ col[0] }}" method="POST" style="margin:0;">
+                        <button type="submit" class="btn-del" onclick="return confirm('বাতিল করবেন? (Delete?)')">ডিলিট</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <!-- Edit Collection Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h4 style="margin-top: 0; color: #f39c12;">✏️ জমা এডিট (Edit Collection)</h4>
+            <form id="editForm" method="POST">
+                <input type="text" id="editMemberName" name="member_name" placeholder="নাম (Name)" required>
+                <input type="number" step="any" id="editAmount" name="amount" placeholder="পরিমাণ (Amount ৳)">
+                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <button type="submit" style="background: #28a745;">সেভ (Save)</button>
+                    <button type="button" onclick="closeEditModal()" style="background: #555;">বাতিল (Cancel)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if is_admin %}
+    <!-- Edit Expense Modal -->
+    <div id="expenseEditModal" class="modal">
+        <div class="modal-content">
+            <h4 style="margin-top: 0; color: #f39c12;">✏️ খরচ এডিট (Edit Expense)</h4>
+            <form id="expenseEditForm" method="POST">
+                <input type="text" id="editExpenseCategory" name="category" placeholder="খাত (Category)" required>
+                <input type="text" id="editExpenseTitle" name="title" placeholder="বিবরণ (Details)" required>
+                <input type="number" step="any" id="editExpenseAmount" name="amount" placeholder="টাকা (Amount ৳)" required>
+                <div style="display: flex; gap: 8px; margin-top: 10px;">
+                    <button type="submit" style="background: #28a745;">আপডেট (Update)</button>
+                    <button type="button" onclick="closeExpenseEditModal()" style="background: #555;">বাতিল (Cancel)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <h4 style="margin: 0 0 10px 0;">📜 পূর্ববর্তী ট্যুর (Archives)</h4>
+        {% for arch in archived_tours %}
+            <div class="archive-item">
+                <div>
+                    <a href="/view_archive/{{ arch[0] }}" class="archive-link">
+                        📁 {{ arch[1] }} ({{ arch[2] }})
+                    </a>
+                    <div style="font-size: 11px; color: #aaa; margin-top: 2px;">মোট খরচ: ৳{{ "%.0f"|format(arch[4]) }}</div>
+                </div>
+                {% if is_admin %}
+                <div style="display: flex; gap: 6px;">
+                    <form action="/restore_archive/{{ arch[0] }}" method="POST" style="margin:0;" onsubmit="return confirm('পুনরায় সক্রিয় (Active) করতে চান?')">
+                        <button type="submit" class="btn-restore">রিস্টোর</button>
+                    </form>
+                    <form action="/delete_archive/{{ arch[0] }}" method="POST" style="margin:0;" onsubmit="return confirm('চিরতরে মুছে ফেলবেন? (Delete Permanently?)')">
+                        <button type="submit" class="btn-del">ডিলিট</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        {% else %}
+            <div style="text-align:center; color:#666; font-size: 13px;">কোনো রেকর্ড নেই (No Records)</div>
+        {% endfor %}
+    </div>
+
+    <script>
+        function shareOnWhatsApp() {
+            let text = "🏕️ *{{ tour_name }} - ট্যুর সামারি*\n\n";
+            text += "💰 *মোট জমা (Total In):* ৳{{ '%.0f'|format(total_collected) }}\n";
+            text += "💸 *মোট খরচ (Total Out):* ৳{{ '%.0f'|format(total_expense) }}\n";
+            text += "⚖️ *অবশিষ্ট ফান্ড (Balance):* ৳{{ '%.0f'|format(balance) }}\n\n";
+
+            text += "🎯 *ফাইনাল সেটলমেন্ট:*\n";
+            text += "(প্রকৃত খরচ জনপ্রতি: ৳{{ '%.0f'|format(actual_per_person_expense) }})\n";
+            {% for s in settlement_list %}
+                {% if s.diff > 0 %}
+                    text += "▪️ {{ s.name }}: ৳{{ '%.0f'|format(s.abs_diff) }} ফেরত পাবে\n";
+                {% elif s.diff < 0 %}
+                    text += "▪️ {{ s.name }}: ৳{{ '%.0f'|format(s.abs_diff) }} দিতে হবে\n";
+                {% else %}
+                    text += "▪️ {{ s.name }}: হিসাব ক্লিয়ার\n";
+                {% endif %}
+            {% endfor %}
+
+            text += "\n📊 *লাইভ ড্যাশবোর্ড ভিজিট করুন:*\n" + window.location.href;
+
+            let encodedText = encodeURIComponent(text);
+            window.open("https://wa.me/?text=" + encodedText, "_blank");
+        }
+
+        function toggleCustomCategory() {
+            var select = document.getElementById("catSelect");
+            var customInput = document.getElementById("customInput");
+            if (select.value === "custom") {
+                customInput.style.display = "block";
+                customInput.required = true;
+            } else {
+                customInput.style.display = "none";
+                customInput.required = false;
+            }
+        }
+
+        function openEditModal(id, name, amount) {
+            document.getElementById("editForm").action = "/edit_collection/" + id;
+            document.getElementById("editMemberName").value = name;
+            document.getElementById("editAmount").value = amount;
+            document.getElementById("editModal").style.display = "block";
+        }
+
+        function closeEditModal() {
+            document.getElementById("editModal").style.display = "none";
+        }
+
+        function openExpenseEditModal(id, category, title, amount) {
+            document.getElementById("expenseEditForm").action = "/edit_expense/" + id;
+            document.getElementById("editExpenseCategory").value = category;
+            document.getElementById("editExpenseTitle").value = title;
+            document.getElementById("editExpenseAmount").value = amount;
+            document.getElementById("expenseEditModal").style.display = "block";
+        }
+
+        function closeExpenseEditModal() {
+            document.getElementById("expenseEditModal").style.display = "none";
+        }
+    </script>
+</body>
+</html>
